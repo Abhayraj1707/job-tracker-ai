@@ -1,0 +1,36 @@
+{
+  "name": "Abhay Raj",
+  "titles": [
+    "Software Development Engineer",
+    "AI Platform Engineer",
+    "Data Engineer",
+    "Backend Engineer"
+  ],
+  "years_experience": 3,
+  "skills": [
+    "Python",
+    "FastAPI",
+    "Apache Spark",
+    "PyArrow",
+    "Apache Arrow Flight",
+    "Vector Search",
+    "RAG Workflows",
+    "MilvusDB",
+    "Elasticsearch",
+    "Docling",
+    "Distributed Data Pipelines",
+    "Document Ingestion & Curation",
+    "Metadata Extraction",
+    "PostgreSQL",
+    "SQLAlchemy",
+    "Docker",
+    "REST APIs",
+    "React"
+  ],
+  "preferred_locations": [
+    "Remote",
+    "Bengaluru",
+    "India"
+  ],
+  "summary": "Software Development Engineer with nearly 3 years of experience building AI data platforms, distributed data pipelines, and data processing systems using Python and Apache Spark. Experienced in large-scale data processing, document ingestion, metadata extraction, vector search (MilvusDB, Elasticsearch), and RAG workflows."
+}

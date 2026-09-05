@@ -15,6 +15,10 @@ import json
 import asyncio
 import httpx
 
+from dotenv import load_dotenv
+
+load_dotenv()
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp-servers", "job_search_server"))
 
 from sources.adzuna import search_adzuna       # noqa: E402
