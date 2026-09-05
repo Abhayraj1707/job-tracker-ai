@@ -1,0 +1,30 @@
+# Environment variables & secrets
+.env
+.env.*
+*.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv/
+
+# SQLite databases
+*.db
+jobs.db
+
+# Node / Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# IDE & OS
+.DS_Store
+.vscode/
+.idea/

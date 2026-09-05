@@ -1,0 +1,33 @@
+name: Daily Job Fetch
+
+on:
+  schedule:
+    - cron: "0 4 * * *"   # 04:00 UTC daily = 9:30 AM IST
+  workflow_dispatch: {}     # allows manual trigger from the Actions tab
+
+jobs:
+  fetch-and-score:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r mcp-servers/job_search_server/requirements.txt
+          pip install -r backend/requirements.txt
+
+      - name: Run daily pipeline
+        env:
+          ADZUNA_APP_ID: ${{ secrets.ADZUNA_APP_ID }}
+          ADZUNA_APP_KEY: ${{ secrets.ADZUNA_APP_KEY }}
+          RAPIDAPI_KEY: ${{ secrets.RAPIDAPI_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          BACKEND_URL: ${{ secrets.BACKEND_URL }}
+          SEARCH_KEYWORDS: "software engineer"
+          SEARCH_LOCATION: "Remote"
+        run: |
+          python scheduler/run_daily_pipeline.py
