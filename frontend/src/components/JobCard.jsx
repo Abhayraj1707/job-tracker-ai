@@ -41,7 +41,7 @@ function isRemote(location = "") {
   return loc.includes("remote") || loc.includes("distributed") || loc.includes("anywhere");
 }
 
-export default function JobCard({ job, onStatusChange, onDelete }) {
+export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch }) {
   const badge = fitBadge(job.fit_score);
   const freshness = getFreshness(job.posted_at);
   const remote = isRemote(job.location);
@@ -131,6 +131,16 @@ export default function JobCard({ job, onStatusChange, onDelete }) {
         </select>
 
         <div className="flex items-center gap-2">
+          {/* 1-Click AI Pitch Button */}
+          <button
+            onClick={() => onDraftPitch && onDraftPitch(job)}
+            className="inline-flex items-center gap-1 text-xs bg-signal/15 hover:bg-signal/25 border border-signal/40 text-signal rounded-md px-2.5 py-1 font-medium transition shadow-xs"
+            title="Generate AI Cover Letter & LinkedIn outreach note"
+          >
+            <span>✨</span>
+            <span>Pitch</span>
+          </button>
+
           {job.url && (
             <a
               href={job.url}

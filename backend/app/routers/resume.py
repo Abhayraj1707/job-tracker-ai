@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session
 from pypdf import PdfReader
 from typing import Optional
 import json
+import httpx
 
 from ..database import get_db
 from .. import models, schemas
@@ -278,3 +279,107 @@ async def trigger_fetch_and_match(background_tasks: BackgroundTasks):
 @router.get("/pipeline-status")
 def get_pipeline_status():
     return pipeline_status
+
+
+class PitchRequest(schemas.BaseModel if hasattr(schemas, "BaseModel") else object):
+    job_id: Optional[int] = None
+    job_title: str
+    company: str
+    location: Optional[str] = ""
+    job_description: Optional[str] = ""
+    tone: Optional[str] = "enthusiastic"  # enthusiastic | concise | leadership
+
+
+@router.post("/generate-pitch")
+async def generate_pitch(req: dict):
+    job_title = req.get("job_title", "")
+    company = req.get("company", "")
+    location = req.get("location", "")
+    job_description = req.get("job_description", "")
+    tone = req.get("tone", "enthusiastic")
+
+    profile = get_current_profile()
+    candidate_name = profile.get("name", "Candidate")
+    skills = ", ".join(profile.get("skills", []))
+    summary = profile.get("summary", "")
+    years_exp = profile.get("years_experience", 2)
+
+    prompt = f"""You are an expert career coach and tech recruiter. Write a highly tailored, compelling 3-paragraph Application Pitch / Cover Letter and a 1-paragraph LinkedIn / Cold Email note for this candidate applying to this job.
+
+CANDIDATE PROFILE:
+Name: {candidate_name}
+Experience: {years_exp} years
+Skills: {skills}
+Summary: {summary}
+
+JOB DETAILS:
+Role: {job_title}
+Company: {company}
+Location: {location}
+Job Details: {job_description}
+Desired Tone: {tone}
+
+REQUIREMENTS:
+1. Specifically connect the candidate's core technical strengths (e.g. {skills[:80]}) to the specific challenges and tech needs of the {job_title} role at {company}.
+2. Keep it authentic, confident, and free of generic fluff.
+3. Return ONLY valid JSON with no markdown backticks, no preamble, matching this exact shape:
+{{
+  "cover_letter": "Paragraph 1: Compelling hook & role excitement.\\n\\nParagraph 2: Deep technical match explaining specific skills & projects solving their needs.\\n\\nParagraph 3: Vision for impact and call to action.",
+  "linkedin_note": "A short, punchy 3-4 sentence message suitable for LinkedIn InMail or cold email to the hiring manager.",
+  "key_highlights": [
+    "3-4 bullet points summarizing top matching qualifications"
+  ]
+}}
+"""
+
+    async with httpx.AsyncClient(timeout=35) as client:
+        # Check Groq first
+        groq_key = os.getenv("GROQ_API_KEY", "")
+        if groq_key:
+            models_to_try = ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile", "llama-3.1-8b-instant"]
+            for model in models_to_try:
+                try:
+                    resp = await client.post(
+                        "https://api.groq.com/openai/v1/chat/completions",
+                        headers={"Authorization": f"Bearer {groq_key}", "Content-Type": "application/json"},
+                        json={
+                            "model": model,
+                            "messages": [{"role": "user", "content": prompt}],
+                            "temperature": 0.4,
+                            "response_format": {"type": "json_object"},
+                        },
+                    )
+                    if resp.status_code == 200:
+                        raw = resp.json()["choices"][0]["message"]["content"]
+                        clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+                        return json.loads(clean)
+                except Exception:
+                    continue
+
+        # Fallback Gemini
+        gemini_key = os.getenv("GEMINI_API_KEY", "")
+        if gemini_key:
+            try:
+                url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={gemini_key}"
+                resp = await client.post(
+                    url,
+                    headers={"Content-Type": "application/json"},
+                    json={"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"response_mime_type": "application/json"}},
+                )
+                if resp.status_code == 200:
+                    raw = resp.json()["candidates"][0]["content"]["parts"][0]["text"]
+                    clean = raw.strip().removeprefix("```json").removeprefix("```").removesuffix("```").strip()
+                    return json.loads(clean)
+            except Exception:
+                pass
+
+    # Template fallback if no LLM responded
+    return {
+        "cover_letter": f"Dear Hiring Team at {company},\n\nI am writing to express my strong interest in the {job_title} role. With over {years_exp} years of hands-on software development experience specializing in {skills[:60]}, I have built high-scale systems and data processing platforms.\n\nThroughout my background, I have focused on building robust architectures, vector search capabilities, and high-performance services. The mission and engineering challenges at {company} strongly resonate with my expertise.\n\nI welcome the opportunity to discuss how my skill set and passion can contribute to your team. Thank you for your time and consideration.\n\nSincerely,\n{candidate_name}",
+        "linkedin_note": f"Hi there! I noticed the {job_title} opening at {company} and wanted to reach out. With {years_exp} years building scalable backend and AI data platforms with {skills[:50]}, I'd love to connect and share how my experience aligns with your team's goals.",
+        "key_highlights": [
+            f"{years_exp}+ years building scalable backend architectures",
+            f"Proficiency in {skills[:60]}",
+            f"Passionate about high-impact contributions at {company}"
+        ]
+    }

@@ -61,3 +61,29 @@ export async function getPipelineStatus() {
   if (!res.ok) throw new Error("Failed to get pipeline status");
   return res.json();
 }
+
+export async function generatePitch(jobData, tone = "enthusiastic") {
+  const res = await fetch(`${BASE_URL}/resume/generate-pitch`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      job_id: jobData.id,
+      job_title: jobData.title,
+      company: jobData.company,
+      location: jobData.location,
+      job_description: jobData.description || jobData.fit_reason || "",
+      tone,
+    }),
+  });
+  if (!res.ok) {
+    let errorDetail = "Failed to generate application pitch";
+    try {
+      const data = await res.json();
+      if (data.detail) errorDetail = data.detail;
+    } catch {
+      // Fallback
+    }
+    throw new Error(errorDetail);
+  }
+  return res.json();
+}

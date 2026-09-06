@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import KanbanColumn from "./KanbanColumn";
 import ResumeUploadModal from "./ResumeUploadModal";
+import PitchModal from "./PitchModal";
 import { fetchJobs, updateJobStatus, deleteJob, getProfile, triggerJobFetch, getPipelineStatus } from "../api";
 
 const COLUMNS = ["New", "Saved", "Applied", "Interview", "Offer", "Rejected"];
@@ -19,6 +20,7 @@ export default function JobBoard() {
   
   // Actions state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [selectedPitchJob, setSelectedPitchJob] = useState(null);
   const [fetchingJobs, setFetchingJobs] = useState(false);
   const [pipelineMessage, setPipelineMessage] = useState("");
 
@@ -320,6 +322,7 @@ export default function JobBoard() {
                   jobs={byStatus(status)}
                   onStatusChange={handleStatusChange}
                   onDelete={handleDelete}
+                  onDraftPitch={(job) => setSelectedPitchJob(job)}
                 />
               ))}
             </div>
@@ -336,6 +339,14 @@ export default function JobBoard() {
           setProfile(newProfile);
           load();
         }}
+      />
+
+      {/* AI Pitch & Cover Letter Generator Modal */}
+      <PitchModal
+        isOpen={!!selectedPitchJob}
+        onClose={() => setSelectedPitchJob(null)}
+        job={selectedPitchJob}
+        candidateProfile={profile}
       />
     </div>
   );
