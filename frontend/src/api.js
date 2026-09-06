@@ -35,7 +35,16 @@ export async function uploadResumeFile(file) {
     method: "POST",
     body: formData,
   });
-  if (!res.ok) throw new Error("Failed to upload and parse resume");
+  if (!res.ok) {
+    let errorDetail = "Failed to upload and parse resume";
+    try {
+      const data = await res.json();
+      if (data.detail) errorDetail = data.detail;
+    } catch {
+      // Use fallback errorDetail
+    }
+    throw new Error(errorDetail);
+  }
   return res.json();
 }
 
