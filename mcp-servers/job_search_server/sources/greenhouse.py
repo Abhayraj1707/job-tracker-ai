@@ -10,7 +10,11 @@ from datetime import datetime, timezone, timedelta
 from typing import List, Dict
 
 # Add company slugs you care about here, or pass them in dynamically from the API layer.
-DEFAULT_COMPANIES = ["stripe", "airbnb", "figma"]
+DEFAULT_COMPANIES = [
+    "stripe", "airbnb", "figma", "databricks", "coinbase", "uber", "pinterest",
+    "gitlab", "instacart", "scale", "cloudflare", "affirm", "discord", "reddit",
+    "plaid", "dropbox", "automattic", "hashicorp", "elastic", "snyk", "gusto"
+]
 
 
 async def search_greenhouse(companies: List[str] = None, hours_old: int = 24) -> List[Dict]:
