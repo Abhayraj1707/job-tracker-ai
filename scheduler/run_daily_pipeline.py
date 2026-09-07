@@ -24,6 +24,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "mcp-servers", 
 from sources.adzuna import search_adzuna       # noqa: E402
 from sources.jsearch import search_jsearch     # noqa: E402
 from sources.greenhouse import search_greenhouse  # noqa: E402
+from sources.lever import search_lever         # noqa: E402
 from ai_scoring import score_fit               # noqa: E402
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
@@ -48,11 +49,21 @@ def is_title_relevant(title: str, keywords_list: list[str]) -> bool:
     return any(k in t for k in tech_match)
 
 
+def is_india_or_remote(location: str) -> bool:
+    loc = (location or "").lower()
+    india_keywords = [
+        "india", "bengaluru", "bangalore", "hyderabad", "pune", "mumbai",
+        "delhi", "gurgaon", "gurugram", "noida", "chennai", "remote", "distributed", "anywhere"
+    ]
+    return any(k in loc for k in india_keywords)
+
+
 async def gather_jobs(target_titles: list[str] = None):
     results = await asyncio.gather(
         search_adzuna(KEYWORDS, LOCATION, max_days_old=1),
         search_jsearch(KEYWORDS, LOCATION, hours_old=24),
         search_greenhouse(hours_old=HOURS_OLD),
+        search_lever(hours_old=HOURS_OLD),
         return_exceptions=True,
     )
     all_raw = []
@@ -64,7 +75,13 @@ async def gather_jobs(target_titles: list[str] = None):
 
     # Filter for tech/engineering relevance
     relevant = [j for j in all_raw if is_title_relevant(j.get("title", ""), target_titles or [])]
-    return relevant[:MAX_JOBS_TO_PROCESS]
+
+    # Prioritize India and Remote postings at the top of the batch
+    india_and_remote = [j for j in relevant if is_india_or_remote(j.get("location", ""))]
+    others = [j for j in relevant if not is_india_or_remote(j.get("location", ""))]
+
+    prioritized = india_and_remote + others
+    return prioritized[:MAX_JOBS_TO_PROCESS]
 
 
 async def main():

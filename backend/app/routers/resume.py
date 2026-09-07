@@ -1,4 +1,5 @@
 import io
+import asyncio
 from fastapi import APIRouter, UploadFile, File, HTTPException, BackgroundTasks, Depends
 from sqlalchemy.orm import Session
 from pypdf import PdfReader
@@ -27,6 +28,7 @@ try:
     from cv_parser import parse_cv
     from ai_scoring import score_fit
     from sources.greenhouse import search_greenhouse
+    from sources.lever import search_lever
     from sources.adzuna import search_adzuna
     from sources.jsearch import search_jsearch
 except ImportError:
@@ -83,7 +85,11 @@ JOB: {job_description}"""
 
     from datetime import datetime, timezone, timedelta
     async def search_greenhouse(companies=None, hours_old=72):
-        companies = companies or ["stripe", "airbnb", "figma", "databricks", "coinbase", "uber", "pinterest", "gitlab", "instacart", "scale", "cloudflare", "discord", "reddit"]
+        companies = companies or [
+            "postman", "groww", "inmobi", "thoughtworks", "twilio", "rubrik",
+            "databricks", "stripe", "figma", "coinbase", "uber", "pinterest",
+            "gitlab", "instacart", "scale", "cloudflare", "discord", "reddit"
+        ]
         cutoff = datetime.now(timezone.utc) - timedelta(hours=hours_old)
         all_jobs = []
         async with httpx.AsyncClient(timeout=15) as client:
@@ -97,11 +103,42 @@ JOB: {job_description}"""
                         all_jobs.append({
                             "source": f"greenhouse:{slug}",
                             "title": item.get("title", ""),
-                            "company": slug,
+                            "company": slug.capitalize(),
                             "location": (item.get("location") or {}).get("name", ""),
                             "url": item.get("absolute_url", ""),
                             "description": "",
                             "posted_at": item.get("updated_at", ""),
+                        })
+                except Exception:
+                    continue
+        return all_jobs
+
+    async def search_lever(companies=None, hours_old=168):
+        companies = companies or ["meesho", "cred", "paytm", "mindtickle", "pocketfm", "chargebee", "hasura", "whatfix", "clevertap", "atlan"]
+        cutoff_ms = (datetime.now(timezone.utc) - timedelta(hours=hours_old)).timestamp() * 1000
+        all_jobs = []
+        async with httpx.AsyncClient(timeout=15) as client:
+            for slug in companies:
+                try:
+                    resp = await client.get(f"https://api.lever.co/v0/postings/{slug}?mode=json")
+                    if resp.status_code != 200:
+                        continue
+                    data = resp.json()
+                    for item in data:
+                        created_at = item.get("createdAt")
+                        if created_at and created_at < cutoff_ms:
+                            continue
+                        categories = item.get("categories") or {}
+                        loc_str = categories.get("location") or ""
+                        posted_dt = datetime.fromtimestamp(created_at / 1000, tz=timezone.utc).isoformat() if created_at else ""
+                        all_jobs.append({
+                            "source": f"lever:{slug}",
+                            "title": item.get("text", "").strip(),
+                            "company": slug.capitalize(),
+                            "location": loc_str,
+                            "url": item.get("hostedUrl", ""),
+                            "description": item.get("descriptionPlain", "")[:500],
+                            "posted_at": posted_dt,
                         })
                 except Exception:
                     continue
@@ -226,11 +263,32 @@ async def run_pipeline_task():
         profile_data = get_current_profile()
         profile_str = json.dumps(profile_data)
 
-        # Gather jobs from Greenhouse and available sources
-        results = await search_greenhouse(hours_old=72)
-        filtered = [j for j in results if is_title_relevant(j.get("title", ""))][:40]
-        pipeline_status["jobs_found"] = len(filtered)
-        pipeline_status["message"] = f"Scoring {len(filtered)} matching jobs with AI..."
+        # Gather jobs from Lever (Meesho, CRED, Paytm, MindTickle, PocketFM, etc.) + Greenhouse (Postman, Groww, InMobi, Twilio, Rubrik, Stripe, Databricks)
+        gh_jobs, lever_jobs = await asyncio.gather(
+            search_greenhouse(hours_old=72),
+            search_lever(hours_old=168),
+            return_exceptions=True
+        )
+        combined = []
+        if isinstance(gh_jobs, list):
+            combined.extend(gh_jobs)
+        if isinstance(lever_jobs, list):
+            combined.extend(lever_jobs)
+
+        filtered = [j for j in combined if is_title_relevant(j.get("title", ""))]
+
+        # Prioritize India & Remote locations
+        def is_india_loc(loc_str):
+            l = (loc_str or "").lower()
+            return any(k in l for k in ["india", "bengaluru", "bangalore", "hyderabad", "pune", "mumbai", "delhi", "gurgaon", "noida", "chennai", "remote"])
+
+        india_jobs = [j for j in filtered if is_india_loc(j.get("location", ""))]
+        other_jobs = [j for j in filtered if not is_india_loc(j.get("location", ""))]
+        ordered = (india_jobs + other_jobs)[:45]
+
+        pipeline_status["jobs_found"] = len(ordered)
+        pipeline_status["message"] = f"Scoring {len(ordered)} India & Remote matching jobs with AI..."
+        filtered = ordered
 
         ingested = 0
         for job in filtered:

@@ -48,8 +48,17 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
 
   return (
     <div className="group bg-surface hover:bg-surface2/80 border border-border hover:border-cool/40 rounded-xl p-3.5 flex flex-col gap-2.5 transition-all duration-150 shadow-sm hover:shadow-md relative">
+      {/* Subtle top-right remove button (appears on hover) */}
+      <button
+        onClick={() => onDelete(job.id)}
+        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted/60 hover:text-warn hover:bg-warn/10 text-xs w-5 h-5 rounded flex items-center justify-center transition"
+        title="Remove from board"
+      >
+        ✕
+      </button>
+
       {/* Header: Title, Company, Match Badge */}
-      <div className="flex items-start justify-between gap-2">
+      <div className="flex items-start justify-between gap-2 pr-4">
         <div className="min-w-0 flex-1">
           <p className="text-text font-medium text-sm leading-snug line-clamp-2 group-hover:text-cool transition-colors">
             {job.title}
@@ -59,7 +68,7 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
             {job.source && (
               <>
                 <span className="opacity-30">•</span>
-                <span className="text-[10px] uppercase font-mono px-1.5 py-0.2 bg-ink border border-border/80 rounded text-muted/80">
+                <span className="text-[10px] uppercase font-mono px-1.5 py-0.5 bg-ink border border-border/80 rounded text-muted/80">
                   {job.source.replace("greenhouse:", "")}
                 </span>
               </>
@@ -69,7 +78,7 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
 
         {badge && (
           <span
-            className={`shrink-0 inline-flex items-center gap-1.5 text-[11px] font-mono font-medium px-2 py-0.5 rounded-full border ${badge.bg}`}
+            className={`shrink-0 inline-flex items-center gap-1 text-[11px] font-mono font-medium px-2 py-0.5 rounded-full border ${badge.bg}`}
           >
             <span className={`w-1.5 h-1.5 rounded-full ${badge.dot}`}></span>
             {badge.label}
@@ -117,11 +126,11 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
       )}
 
       {/* Footer Controls: Status Dropdown & Action Links */}
-      <div className="flex items-center justify-between pt-1 border-t border-border/50 gap-2">
+      <div className="flex items-center justify-between pt-1.5 border-t border-border/50 gap-2">
         <select
           value={job.status}
           onChange={(e) => onStatusChange(job.id, e.target.value)}
-          className="bg-ink hover:bg-surface2 text-text text-xs rounded-md border border-border px-2 py-1 focus:outline-none focus:border-cool font-medium cursor-pointer transition"
+          className="bg-ink hover:bg-surface2 text-text text-xs rounded-md border border-border px-2 py-1 focus:outline-none focus:border-cool font-medium cursor-pointer transition shrink-0"
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -130,11 +139,11 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
           ))}
         </select>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-1.5 shrink-0">
           {/* 1-Click AI Pitch Button */}
           <button
             onClick={() => onDraftPitch && onDraftPitch(job)}
-            className="inline-flex items-center gap-1 text-xs bg-signal/15 hover:bg-signal/25 border border-signal/40 text-signal rounded-md px-2.5 py-1 font-medium transition shadow-xs"
+            className="inline-flex items-center gap-1 text-xs bg-signal/15 hover:bg-signal/25 border border-signal/40 text-signal rounded-md px-2 py-1 font-medium transition shadow-xs"
             title="Generate AI Cover Letter & LinkedIn outreach note"
           >
             <span>✨</span>
@@ -146,19 +155,12 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
               href={job.url}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs bg-cool/10 hover:bg-cool/20 border border-cool/30 text-cool rounded-md px-2.5 py-1 font-medium transition"
+              className="inline-flex items-center gap-1 text-xs bg-cool/10 hover:bg-cool/20 border border-cool/30 text-cool rounded-md px-2 py-1 font-medium transition"
             >
               <span>Apply</span>
               <span className="text-[10px]">↗</span>
             </a>
           )}
-          <button
-            onClick={() => onDelete(job.id)}
-            className="text-muted/60 hover:text-warn text-xs p-1 rounded hover:bg-warn/10 transition"
-            title="Remove from board"
-          >
-            ✕
-          </button>
         </div>
       </div>
     </div>

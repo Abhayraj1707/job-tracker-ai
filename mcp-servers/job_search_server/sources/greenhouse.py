@@ -9,11 +9,14 @@ import httpx
 from datetime import datetime, timezone, timedelta
 from typing import List, Dict
 
-# Add company slugs you care about here, or pass them in dynamically from the API layer.
+# Top Indian tech engineering hubs & global MNCs with massive India/Remote presence
 DEFAULT_COMPANIES = [
-    "stripe", "airbnb", "figma", "databricks", "coinbase", "uber", "pinterest",
-    "gitlab", "instacart", "scale", "cloudflare", "affirm", "discord", "reddit",
-    "plaid", "dropbox", "automattic", "hashicorp", "elastic", "snyk", "gusto"
+    # Top India tech & startups
+    "postman", "groww", "inmobi", "thoughtworks", "twilio", "rubrik",
+    # Global top tier tech hiring Remote / India
+    "databricks", "stripe", "figma", "coinbase", "uber", "pinterest",
+    "gitlab", "instacart", "scale", "cloudflare", "affirm", "discord",
+    "reddit", "dropbox", "automattic", "elastic", "snyk", "gusto"
 ]
 
 
