@@ -25,6 +25,7 @@ from sources.adzuna import search_adzuna       # noqa: E402
 from sources.jsearch import search_jsearch     # noqa: E402
 from sources.greenhouse import search_greenhouse  # noqa: E402
 from sources.lever import search_lever         # noqa: E402
+from sources.remote_sources import search_remoteok, search_himalayas  # noqa: E402
 from ai_scoring import score_fit               # noqa: E402
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
@@ -64,6 +65,8 @@ async def gather_jobs(target_titles: list[str] = None):
         search_jsearch(KEYWORDS, LOCATION, hours_old=24),
         search_greenhouse(hours_old=HOURS_OLD),
         search_lever(hours_old=HOURS_OLD),
+        search_remoteok(hours_old=HOURS_OLD),
+        search_himalayas(hours_old=HOURS_OLD),
         return_exceptions=True,
     )
     all_raw = []

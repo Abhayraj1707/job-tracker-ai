@@ -29,6 +29,7 @@ try:
     from ai_scoring import score_fit
     from sources.greenhouse import search_greenhouse
     from sources.lever import search_lever
+    from sources.remote_sources import search_remoteok, search_himalayas
     from sources.adzuna import search_adzuna
     from sources.jsearch import search_jsearch
 except ImportError:
@@ -263,17 +264,18 @@ async def run_pipeline_task():
         profile_data = get_current_profile()
         profile_str = json.dumps(profile_data)
 
-        # Gather jobs from Lever (Meesho, CRED, Paytm, MindTickle, PocketFM, etc.) + Greenhouse (Postman, Groww, InMobi, Twilio, Rubrik, Stripe, Databricks)
-        gh_jobs, lever_jobs = await asyncio.gather(
+        # Gather jobs from Lever (Meesho, CRED, Paytm, etc.) + Greenhouse + RemoteOK + Himalayas
+        gh_jobs, lever_jobs, remoteok_jobs, himalayas_jobs = await asyncio.gather(
             search_greenhouse(hours_old=72),
             search_lever(hours_old=168),
+            search_remoteok(hours_old=168),
+            search_himalayas(hours_old=168),
             return_exceptions=True
         )
         combined = []
-        if isinstance(gh_jobs, list):
-            combined.extend(gh_jobs)
-        if isinstance(lever_jobs, list):
-            combined.extend(lever_jobs)
+        for r in [gh_jobs, lever_jobs, remoteok_jobs, himalayas_jobs]:
+            if isinstance(r, list):
+                combined.extend(r)
 
         filtered = [j for j in combined if is_title_relevant(j.get("title", ""))]
 
