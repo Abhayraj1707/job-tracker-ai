@@ -35,7 +35,10 @@ MIN_FIT_SCORE_TO_KEEP = int(os.getenv("MIN_FIT_SCORE_TO_KEEP", "50"))  # Only ke
 MAX_JOBS_TO_PROCESS = int(os.getenv("MAX_JOBS_TO_PROCESS", "50"))      # Cap to avoid rate limits
 HOURS_OLD = int(os.getenv("HOURS_OLD", "72"))
 
-CV_PROFILE_PATH = os.getenv("CV_PROFILE_PATH", "cv_profile.json")
+CV_PROFILE_PATH = os.getenv(
+    "CV_PROFILE_PATH",
+    os.path.join(os.path.dirname(os.path.abspath(__file__)), "cv_profile.json"),
+)
 
 
 def is_title_relevant(title: str, keywords_list: list[str]) -> bool:
