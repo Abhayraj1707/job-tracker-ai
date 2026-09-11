@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import KanbanColumn from "./KanbanColumn";
+import StatsBar from "./StatsBar";
 import ResumeUploadModal from "./ResumeUploadModal";
 import AddJobModal from "./AddJobModal";
 import PitchModal from "./PitchModal";
@@ -281,6 +282,9 @@ export default function JobBoard() {
           </div>
         </div>
       </div>
+
+      {/* Stats Bar */}
+      <StatsBar jobs={jobs} />
 
       {/* Main Kanban Content */}
       <main className="flex-1 px-6 py-6 overflow-x-auto">

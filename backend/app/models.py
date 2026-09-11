@@ -27,6 +27,9 @@ class Job(Base):
     # User notes
     notes = Column(Text, nullable=True)
 
+    # Follow-up reminder date (ISO date string: YYYY-MM-DD)
+    follow_up_date = Column(String, nullable=True)
+
     __table_args__ = (
         UniqueConstraint("title", "company", name="uq_title_company"),
     )

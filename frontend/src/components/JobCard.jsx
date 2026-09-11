@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { updateJobNotes } from "../api";
+import { updateJobNotes, updateFollowUpDate } from "../api";
 
 const STATUSES = ["New", "Saved", "Applied", "Interview", "Offer", "Rejected"];
 
@@ -66,6 +66,7 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
   const [notes, setNotes] = useState(job.notes || "");
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [followUpDate, setFollowUpDate] = useState(job.follow_up_date || "");
   const saveTimer = useRef(null);
   const textareaRef = useRef(null);
 
@@ -92,6 +93,27 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
       }
     }, 1000);
   }
+
+  async function handleFollowUpChange(e) {
+    const val = e.target.value;
+    setFollowUpDate(val);
+    await updateFollowUpDate(job.id, val || null);
+  }
+
+  // Follow-up badge info
+  function getFollowUpBadge() {
+    if (!followUpDate) return null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const due = new Date(followUpDate + "T00:00:00");
+    const diffDays = Math.round((due - today) / 86400000);
+    if (diffDays < 0) return { label: `Overdue by ${Math.abs(diffDays)}d`, cls: "bg-red-500/15 border-red-500/40 text-red-400" };
+    if (diffDays === 0) return { label: "Follow up today!", cls: "bg-amber-500/15 border-amber-500/40 text-amber-300" };
+    if (diffDays <= 3) return { label: `Follow up in ${diffDays}d`, cls: "bg-amber-500/10 border-amber-500/30 text-amber-300" };
+    return { label: `Follow up ${due.toLocaleDateString("en-GB", { day: "numeric", month: "short" })}`, cls: "bg-signal/10 border-signal/30 text-signal" };
+  }
+
+  const followUpBadge = getFollowUpBadge();
 
   return (
     <div className="group bg-surface hover:bg-surface2/80 border border-border hover:border-cool/40 rounded-xl p-3.5 flex flex-col gap-2.5 transition-all duration-150 shadow-sm hover:shadow-md relative">
@@ -194,14 +216,40 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
           <span className="text-[10px] font-mono text-muted/60 text-right h-3">
             {saving ? "Saving..." : saved ? "✓ Saved" : ""}
           </span>
+          {/* Follow-up date picker — inside notes panel */}
+          <div className="flex items-center gap-2 mt-0.5">
+            <label className="text-[10px] text-muted font-mono shrink-0">🔔 Follow up by</label>
+            <input
+              type="date"
+              value={followUpDate}
+              onChange={handleFollowUpChange}
+              className="bg-ink border border-border focus:border-cool rounded px-2 py-0.5 text-[11px] text-text focus:outline-none transition"
+            />
+            {followUpDate && (
+              <button
+                onClick={() => handleFollowUpChange({ target: { value: "" } })}
+                className="text-[10px] text-muted/60 hover:text-warn transition"
+                title="Clear date"
+              >✕</button>
+            )}
+          </div>
         </div>
       )}
 
-      {/* Notes indicator dot when closed but has content */}
-      {!notesOpen && notes && (
-        <div className="flex items-center gap-1 text-[10px] text-muted/70 font-mono">
-          <span className="w-1.5 h-1.5 rounded-full bg-cool/60"></span>
-          <span className="truncate italic">{notes.split("\n")[0].slice(0, 60)}{notes.length > 60 ? "…" : ""}</span>
+      {/* Notes indicator + follow-up badge when notes panel is closed */}
+      {!notesOpen && (
+        <div className="flex flex-wrap items-center gap-1.5">
+          {notes && (
+            <div className="flex items-center gap-1 text-[10px] text-muted/70 font-mono">
+              <span className="w-1.5 h-1.5 rounded-full bg-cool/60"></span>
+              <span className="truncate italic">{notes.split("\n")[0].slice(0, 60)}{notes.length > 60 ? "…" : ""}</span>
+            </div>
+          )}
+          {followUpBadge && (
+            <span className={`inline-flex items-center gap-1 text-[10px] font-mono px-1.5 py-0.5 rounded border ${followUpBadge.cls}`}>
+              🔔 {followUpBadge.label}
+            </span>
+          )}
         </div>
       )}
 

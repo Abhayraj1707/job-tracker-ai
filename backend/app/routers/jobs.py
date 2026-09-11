@@ -5,7 +5,7 @@ from typing import List, Optional
 
 from .. import models, schemas
 from ..database import get_db
-from ..schemas import NotesUpdate
+from ..schemas import NotesUpdate, FollowUpUpdate
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -62,6 +62,17 @@ def update_notes(job_id: int, update: NotesUpdate, db: Session = Depends(get_db)
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
     db_job.notes = update.notes
+    db.commit()
+    db.refresh(db_job)
+    return db_job
+
+
+@router.patch("/{job_id}/follow-up", response_model=schemas.JobOut)
+def update_follow_up(job_id: int, update: FollowUpUpdate, db: Session = Depends(get_db)):
+    db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
+    if not db_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    db_job.follow_up_date = update.follow_up_date
     db.commit()
     db.refresh(db_job)
     return db_job

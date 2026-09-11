@@ -26,6 +26,16 @@ export async function addJob(jobData) {
   return res.json();
 }
 
+export async function updateFollowUpDate(jobId, follow_up_date) {
+  const res = await fetch(`${BASE_URL}/jobs/${jobId}/follow-up`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ follow_up_date }),
+  });
+  if (!res.ok) throw new Error("Failed to save follow-up date");
+  return res.json();
+}
+
 export async function updateJobNotes(jobId, notes) {
   const res = await fetch(`${BASE_URL}/jobs/${jobId}/notes`, {
     method: "PATCH",

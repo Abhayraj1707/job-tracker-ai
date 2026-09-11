@@ -17,6 +17,7 @@ class JobOut(BaseModel):
     fit_reason: Optional[str] = None
     status: str
     notes: Optional[str] = None
+    follow_up_date: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -42,3 +43,7 @@ class StatusUpdate(BaseModel):
 
 class NotesUpdate(BaseModel):
     notes: str
+
+
+class FollowUpUpdate(BaseModel):
+    follow_up_date: Optional[str] = None
