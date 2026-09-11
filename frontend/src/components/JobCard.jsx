@@ -1,3 +1,6 @@
+import { useState, useRef, useEffect } from "react";
+import { updateJobNotes } from "../api";
+
 const STATUSES = ["New", "Saved", "Applied", "Interview", "Offer", "Rejected"];
 
 function fitBadge(score) {
@@ -41,14 +44,58 @@ function isRemote(location = "") {
   return loc.includes("remote") || loc.includes("distributed") || loc.includes("anywhere");
 }
 
+function formatSalary(min, max) {
+  if (!min && !max) return null;
+  const fmt = (n) => {
+    if (n >= 100000) return `$${(n / 1000).toFixed(0)}k`;
+    if (n >= 1000) return `$${(n / 1000).toFixed(0)}k`;
+    return `$${n}`;
+  };
+  if (min && max) return `${fmt(min)} – ${fmt(max)}`;
+  if (min) return `From ${fmt(min)}`;
+  return `Up to ${fmt(max)}`;
+}
+
 export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch }) {
   const badge = fitBadge(job.fit_score);
   const freshness = getFreshness(job.posted_at);
   const remote = isRemote(job.location);
+  const salary = formatSalary(job.salary_min, job.salary_max);
+
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notes, setNotes] = useState(job.notes || "");
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const saveTimer = useRef(null);
+  const textareaRef = useRef(null);
+
+  // Auto-focus textarea when notes panel opens
+  useEffect(() => {
+    if (notesOpen && textareaRef.current) {
+      textareaRef.current.focus();
+    }
+  }, [notesOpen]);
+
+  // Debounced auto-save: save 1s after user stops typing
+  function handleNotesChange(e) {
+    const val = e.target.value;
+    setNotes(val);
+    setSaved(false);
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(async () => {
+      setSaving(true);
+      try {
+        await updateJobNotes(job.id, val);
+        setSaved(true);
+      } finally {
+        setSaving(false);
+      }
+    }, 1000);
+  }
 
   return (
     <div className="group bg-surface hover:bg-surface2/80 border border-border hover:border-cool/40 rounded-xl p-3.5 flex flex-col gap-2.5 transition-all duration-150 shadow-sm hover:shadow-md relative">
-      {/* Subtle top-right remove button (appears on hover) */}
+      {/* Remove button */}
       <button
         onClick={() => onDelete(job.id)}
         className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted/60 hover:text-warn hover:bg-warn/10 text-xs w-5 h-5 rounded flex items-center justify-center transition"
@@ -86,7 +133,7 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
         )}
       </div>
 
-      {/* Location & Freshness metadata tags */}
+      {/* Location, Freshness, Salary metadata tags */}
       <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
         {job.location && (
           <span
@@ -113,6 +160,14 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
             <span>{freshness.text}</span>
           </span>
         )}
+
+        {/* Salary badge — only shown when data exists */}
+        {salary && (
+          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border text-[11px] font-mono bg-violet-500/10 border-violet-500/30 text-violet-300">
+            <span>💰</span>
+            <span>{salary}</span>
+          </span>
+        )}
       </div>
 
       {/* AI Fit Reason */}
@@ -125,12 +180,37 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
         </div>
       )}
 
-      {/* Footer Controls: Status Dropdown & Action Links */}
-      <div className="flex items-center justify-between pt-1.5 border-t border-border/50 gap-2">
+      {/* Notes panel — expands inline */}
+      {notesOpen && (
+        <div className="flex flex-col gap-1.5">
+          <textarea
+            ref={textareaRef}
+            value={notes}
+            onChange={handleNotesChange}
+            placeholder="Add your notes — recruiter name, interview prep, follow-up date..."
+            rows={3}
+            className="w-full bg-ink border border-border focus:border-cool rounded-lg px-2.5 py-2 text-[11px] text-text placeholder:text-muted/50 resize-none focus:outline-none transition"
+          />
+          <span className="text-[10px] font-mono text-muted/60 text-right h-3">
+            {saving ? "Saving..." : saved ? "✓ Saved" : ""}
+          </span>
+        </div>
+      )}
+
+      {/* Notes indicator dot when closed but has content */}
+      {!notesOpen && notes && (
+        <div className="flex items-center gap-1 text-[10px] text-muted/70 font-mono">
+          <span className="w-1.5 h-1.5 rounded-full bg-cool/60"></span>
+          <span className="truncate italic">{notes.split("\n")[0].slice(0, 60)}{notes.length > 60 ? "…" : ""}</span>
+        </div>
+      )}
+
+      {/* Footer Controls — status on its own row, actions below */}
+      <div className="flex flex-col gap-1.5 pt-1.5 border-t border-border/50">
         <select
           value={job.status}
           onChange={(e) => onStatusChange(job.id, e.target.value)}
-          className="bg-ink hover:bg-surface2 text-text text-xs rounded-md border border-border px-2 py-1 focus:outline-none focus:border-cool font-medium cursor-pointer transition shrink-0"
+          className="w-full bg-ink hover:bg-surface2 text-text text-xs rounded-md border border-border px-2 py-1 focus:outline-none focus:border-cool font-medium cursor-pointer transition"
         >
           {STATUSES.map((s) => (
             <option key={s} value={s}>
@@ -139,12 +219,24 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
           ))}
         </select>
 
-        <div className="flex items-center gap-1.5 shrink-0">
-          {/* 1-Click AI Pitch Button */}
+        <div className="flex items-center gap-1.5">
+          {/* Notes toggle */}
+          <button
+            onClick={() => setNotesOpen((o) => !o)}
+            className={`inline-flex items-center gap-1 text-xs rounded-md px-2 py-1 font-medium transition border ${
+              notesOpen || notes
+                ? "bg-cool/15 border-cool/40 text-cool"
+                : "bg-surface2 border-border text-muted hover:text-text hover:border-border/80"
+            }`}
+          >
+            <span>📝</span>
+            <span>{notesOpen ? "✕" : "Notes"}</span>
+          </button>
+
+          {/* AI Pitch */}
           <button
             onClick={() => onDraftPitch && onDraftPitch(job)}
-            className="inline-flex items-center gap-1 text-xs bg-signal/15 hover:bg-signal/25 border border-signal/40 text-signal rounded-md px-2 py-1 font-medium transition shadow-xs"
-            title="Generate AI Cover Letter & LinkedIn outreach note"
+            className="inline-flex items-center gap-1 text-xs bg-signal/15 hover:bg-signal/25 border border-signal/40 text-signal rounded-md px-2 py-1 font-medium transition"
           >
             <span>✨</span>
             <span>Pitch</span>
@@ -157,8 +249,7 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
               rel="noreferrer"
               className="inline-flex items-center gap-1 text-xs bg-cool/10 hover:bg-cool/20 border border-cool/30 text-cool rounded-md px-2 py-1 font-medium transition"
             >
-              <span>Apply</span>
-              <span className="text-[10px]">↗</span>
+              Apply ↗
             </a>
           )}
         </div>

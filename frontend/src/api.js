@@ -16,6 +16,26 @@ export async function updateJobStatus(jobId, status) {
   return res.json();
 }
 
+export async function addJob(jobData) {
+  const res = await fetch(`${BASE_URL}/jobs/`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(jobData),
+  });
+  if (!res.ok) throw new Error("Failed to add job");
+  return res.json();
+}
+
+export async function updateJobNotes(jobId, notes) {
+  const res = await fetch(`${BASE_URL}/jobs/${jobId}/notes`, {
+    method: "PATCH",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ notes }),
+  });
+  if (!res.ok) throw new Error("Failed to save notes");
+  return res.json();
+}
+
 export async function deleteJob(jobId) {
   const res = await fetch(`${BASE_URL}/jobs/${jobId}`, { method: "DELETE" });
   if (!res.ok) throw new Error("Failed to delete job");

@@ -24,6 +24,9 @@ class Job(Base):
     # Applied / Saved / Interview / Rejected / Offer
     status = Column(String, default="New", index=True)
 
+    # User notes
+    notes = Column(Text, nullable=True)
+
     __table_args__ = (
         UniqueConstraint("title", "company", name="uq_title_company"),
     )

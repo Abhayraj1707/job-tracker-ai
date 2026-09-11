@@ -16,6 +16,7 @@ class JobOut(BaseModel):
     fit_score: Optional[int] = None
     fit_reason: Optional[str] = None
     status: str
+    notes: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -37,3 +38,7 @@ class JobCreate(BaseModel):
 
 class StatusUpdate(BaseModel):
     status: str
+
+
+class NotesUpdate(BaseModel):
+    notes: str

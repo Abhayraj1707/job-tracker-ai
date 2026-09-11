@@ -5,6 +5,7 @@ from typing import List, Optional
 
 from .. import models, schemas
 from ..database import get_db
+from ..schemas import NotesUpdate
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -50,6 +51,17 @@ def update_status(job_id: int, update: schemas.StatusUpdate, db: Session = Depen
     if not db_job:
         raise HTTPException(status_code=404, detail="Job not found")
     db_job.status = update.status
+    db.commit()
+    db.refresh(db_job)
+    return db_job
+
+
+@router.patch("/{job_id}/notes", response_model=schemas.JobOut)
+def update_notes(job_id: int, update: NotesUpdate, db: Session = Depends(get_db)):
+    db_job = db.query(models.Job).filter(models.Job.id == job_id).first()
+    if not db_job:
+        raise HTTPException(status_code=404, detail="Job not found")
+    db_job.notes = update.notes
     db.commit()
     db.refresh(db_job)
     return db_job

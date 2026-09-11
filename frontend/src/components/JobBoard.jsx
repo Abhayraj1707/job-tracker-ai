@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import KanbanColumn from "./KanbanColumn";
 import ResumeUploadModal from "./ResumeUploadModal";
+import AddJobModal from "./AddJobModal";
 import PitchModal from "./PitchModal";
 import { fetchJobs, updateJobStatus, deleteJob, getProfile, triggerJobFetch, getPipelineStatus } from "../api";
 
@@ -20,6 +21,7 @@ export default function JobBoard() {
   
   // Actions state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [selectedPitchJob, setSelectedPitchJob] = useState(null);
   const [fetchingJobs, setFetchingJobs] = useState(false);
   const [pipelineMessage, setPipelineMessage] = useState("");
@@ -160,6 +162,15 @@ export default function JobBoard() {
             >
               <span>📄</span>
               <span>Upload Resume</span>
+            </button>
+
+            {/* Manual Add Job Button */}
+            <button
+              onClick={() => setIsAddJobOpen(true)}
+              className="text-xs bg-surface2 hover:bg-surface border border-border hover:border-signal/50 text-text rounded-lg px-3 py-1.5 transition flex items-center gap-1.5 shadow-sm"
+            >
+              <span>➕</span>
+              <span>Add Job</span>
             </button>
 
             {/* On-demand Job Fetcher */}
@@ -329,6 +340,15 @@ export default function JobBoard() {
           )}
         </div>
       </main>
+
+      {/* Manual Add Job Modal */}
+      <AddJobModal
+        isOpen={isAddJobOpen}
+        onClose={() => setIsAddJobOpen(false)}
+        onAdded={(newJob) => {
+          setJobs((prev) => [newJob, ...prev]);
+        }}
+      />
 
       {/* Resume Upload Modal */}
       <ResumeUploadModal
