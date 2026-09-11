@@ -27,6 +27,7 @@ from sources.greenhouse import search_greenhouse  # noqa: E402
 from sources.lever import search_lever         # noqa: E402
 from sources.remote_sources import search_remoteok, search_himalayas  # noqa: E402
 from ai_scoring import score_fit               # noqa: E402
+from telegram_notify import send_daily_digest  # noqa: E402
 
 BACKEND_URL = os.getenv("BACKEND_URL", "http://localhost:8000")
 KEYWORDS = os.getenv("SEARCH_KEYWORDS", "software engineer, data engineer, python, ai, backend")
@@ -103,6 +104,8 @@ async def main():
     jobs = await gather_jobs(target_titles)
     print(f"[info] pre-filtered {len(jobs)} relevant engineering jobs for scoring")
 
+    ingested_jobs = []
+
     async with httpx.AsyncClient(timeout=30) as client:
         kept = 0
         for idx, job in enumerate(jobs, 1):
@@ -128,8 +131,12 @@ async def main():
                 resp = await client.post(f"{BACKEND_URL}/jobs/", json=payload)
                 if resp.status_code == 200:
                     kept += 1
+                    ingested_jobs.append({**payload, "fit_score": score, "fit_reason": fit.get("reason")})
 
     print(f"[info] ingested {kept} jobs into tracker")
+
+    # Send Telegram digest with top high-match jobs
+    await send_daily_digest(ingested_jobs)
 
 
 if __name__ == "__main__":
