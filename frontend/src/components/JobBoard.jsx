@@ -4,6 +4,7 @@ import StatsBar from "./StatsBar";
 import ResumeUploadModal from "./ResumeUploadModal";
 import AddJobModal from "./AddJobModal";
 import PitchModal from "./PitchModal";
+import JobDetailDrawer from "./JobDetailDrawer";
 import { fetchJobs, updateJobStatus, deleteJob, getProfile, triggerJobFetch, getPipelineStatus } from "../api";
 
 const COLUMNS = ["New", "Saved", "Applied", "Interview", "Offer", "Rejected"];
@@ -29,6 +30,7 @@ export default function JobBoard() {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
   const [selectedPitchJob, setSelectedPitchJob] = useState(null);
+  const [detailJob, setDetailJob] = useState(null);
   const [fetchingJobs, setFetchingJobs] = useState(false);
   const [pipelineMessage, setPipelineMessage] = useState("");
 
@@ -408,16 +410,17 @@ export default function JobBoard() {
             <div className="flex gap-4 overflow-x-auto pb-6 items-start">
               {COLUMNS.map((status) => (
                 <KanbanColumn
-                  key={status}
-                  title={status}
-                  jobs={byStatus(status)}
-                  onStatusChange={handleStatusChange}
-                  onDelete={handleDelete}
-                  onDraftPitch={(job) => setSelectedPitchJob(job)}
-                  selectMode={selectMode}
-                  selectedIds={selectedIds}
-                  onToggleSelect={toggleSelect}
-                />
+                    key={status}
+                    title={status}
+                    jobs={byStatus(status)}
+                    onStatusChange={handleStatusChange}
+                    onDelete={handleDelete}
+                    onDraftPitch={(job) => setSelectedPitchJob(job)}
+                    onViewDetail={(job) => setDetailJob(job)}
+                    selectMode={selectMode}
+                    selectedIds={selectedIds}
+                    onToggleSelect={toggleSelect}
+                  />
               ))}
             </div>
           )}
@@ -450,6 +453,13 @@ export default function JobBoard() {
         onClose={() => setSelectedPitchJob(null)}
         job={selectedPitchJob}
         candidateProfile={profile}
+      />
+
+      {/* Job Detail Drawer */}
+      <JobDetailDrawer
+        job={detailJob}
+        onClose={() => setDetailJob(null)}
+        onDraftPitch={(job) => { setDetailJob(null); setSelectedPitchJob(job); }}
       />
     </div>
   );

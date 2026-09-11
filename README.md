@@ -33,12 +33,13 @@ application.
 │  Daily Scheduler   │ │  Claude API     │  │   FastAPI Backend  │
 │ (GitHub Actions    │ │ (CV parsing +   │  │  (jobs, statuses,  │
 │  cron, free)       │ │  fit scoring)   │  │   SQLite/Postgres) │
-└────────────────────┘ └─────────────────┘  └──────────┬─────────┘
-                                                          │
-                                              ┌───────────▼───────────┐
-                                              │   React Frontend       │
-                                              │  Kanban tracker board  │
-                                              └────────────────────────┘
+└────────┬───────────┘ └─────────────────┘  └──────────┬─────────┘
+         │                                              │
+┌────────▼───────────┐                     ┌───────────▼───────────┐
+│  Telegram Bot       │                     │   React Frontend       │
+│  (daily digest of   │                     │  Kanban tracker board  │
+│   top-match jobs)   │                     └────────────────────────┘
+└────────────────────┘
 ```
 
 **Why an MCP server, specifically:** wrapping each job source as an MCP tool
@@ -62,7 +63,8 @@ job-tracker-ai/
 ├── frontend/                        # React + Tailwind kanban board
 │   └── src/
 ├── scheduler/
-│   └── run_daily_pipeline.py        # ties search -> scoring -> backend together
+│   ├── run_daily_pipeline.py        # ties search -> scoring -> backend together
+│   └── telegram_notify.py           # Telegram digest sender
 └── .github/workflows/daily-job-fetch.yml   # free daily cron via GitHub Actions
 ```
 
@@ -121,7 +123,19 @@ Add to Claude Desktop's `claude_desktop_config.json`:
 ```
 Then just ask: *"Search for backend engineer jobs in Bangalore posted in the last 24 hours."*
 
-### 7. Automate it
+### 7. (Optional) Set up Telegram notifications
+After each pipeline run you'll get a message listing today's top-match jobs.
+
+1. Talk to [@BotFather](https://t.me/BotFather) → create a bot → copy the token.
+2. Send `/start` to [@userinfobot](https://t.me/userinfobot) to get your `CHAT_ID`.
+3. Add both to your `.env`:
+   ```
+   TELEGRAM_BOT_TOKEN=<your-token>
+   TELEGRAM_CHAT_ID=<your-chat-id>
+   ```
+4. For GitHub Actions: add `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` as repo secrets (Settings → Secrets → Actions) — the workflow already reads them.
+
+### 8. Automate it
 Push this repo to GitHub, add your API keys as repo secrets (Settings →
 Secrets → Actions), and `.github/workflows/daily-job-fetch.yml` will run the
 pipeline every day for free.
@@ -162,6 +176,6 @@ directly. If you add a scraper for personal use, treat it as fragile
 
 ## Possible extensions
 - Add a vector DB (e.g. pgvector) for semantic search across saved jobs
-- Slack/Telegram notification when a high-fit job appears
+- Slack notification channel (mirror of the existing Telegram digest)
 - Auto-fill application forms via a browser automation MCP tool
 - Multi-user support with per-user CV profiles and auth

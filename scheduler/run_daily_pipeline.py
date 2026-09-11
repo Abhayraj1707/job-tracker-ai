@@ -145,8 +145,8 @@ async def main():
 
     print(f"[info] ingested {kept} jobs into tracker")
 
-    # Send Telegram digest with top high-match jobs
-    await send_daily_digest(ingested_jobs)
+    # Send Telegram digest with top high-match jobs + overdue follow-up count
+    await send_daily_digest(ingested_jobs, backend_url=BACKEND_URL)
 
 
 if __name__ == "__main__":

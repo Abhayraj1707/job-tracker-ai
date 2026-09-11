@@ -18,6 +18,20 @@ export default {
         sans: ["Inter", "system-ui", "sans-serif"],
         mono: ["JetBrains Mono", "ui-monospace", "monospace"],
       },
+      keyframes: {
+        "slide-in-right": {
+          "0%": { transform: "translateX(100%)" },
+          "100%": { transform: "translateX(0)" },
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" },
+        },
+      },
+      animation: {
+        "slide-in-right": "slide-in-right 0.22s cubic-bezier(0.25, 0.46, 0.45, 0.94) both",
+        "fade-in": "fade-in 0.15s ease-out both",
+      },
     },
   },
   plugins: [],

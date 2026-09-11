@@ -56,7 +56,7 @@ function formatSalary(min, max) {
   return `Up to ${fmt(max)}`;
 }
 
-export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch, selectMode, isSelected, onToggleSelect }) {
+export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch, onViewDetail, selectMode, isSelected, onToggleSelect }) {
   const badge = fitBadge(job.fit_score);
   const freshness = getFreshness(job.posted_at);
   const remote = isRemote(job.location);
@@ -143,7 +143,11 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch, s
       {/* Header: Title, Company, Match Badge */}
       <div className="flex items-start justify-between gap-2 pr-4">
         <div className="min-w-0 flex-1">
-          <p className="text-text font-medium text-sm leading-snug line-clamp-2 group-hover:text-cool transition-colors">
+          <p
+            onClick={!selectMode ? () => onViewDetail && onViewDetail(job) : undefined}
+            className={`text-text font-medium text-sm leading-snug line-clamp-2 transition-colors ${!selectMode ? "cursor-pointer hover:text-cool hover:underline underline-offset-2" : "group-hover:text-cool"}`}
+            title="View full details"
+          >
             {job.title}
           </p>
           <div className="flex items-center gap-1.5 mt-1 text-xs text-muted font-medium">
@@ -281,40 +285,48 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch, s
           ))}
         </select>
 
+        {/* Row 1: Notes · Details · Pitch — equal weight secondary actions */}
         <div className="flex items-center gap-1.5">
-          {/* Notes toggle */}
           <button
             onClick={() => setNotesOpen((o) => !o)}
-            className={`inline-flex items-center gap-1 text-xs rounded-md px-2 py-1 font-medium transition border ${
+            className={`flex-1 inline-flex items-center justify-center gap-1 text-xs rounded-md px-2 py-1 font-medium transition border ${
               notesOpen || notes
                 ? "bg-cool/15 border-cool/40 text-cool"
                 : "bg-surface2 border-border text-muted hover:text-text hover:border-border/80"
             }`}
           >
             <span>📝</span>
-            <span>{notesOpen ? "✕" : "Notes"}</span>
+            <span>{notesOpen ? "✕ Notes" : "Notes"}</span>
           </button>
 
-          {/* AI Pitch */}
+          <button
+            onClick={() => onViewDetail && onViewDetail(job)}
+            className="flex-1 inline-flex items-center justify-center gap-1 text-xs bg-surface2 hover:bg-ink border border-border hover:border-cool/40 text-muted hover:text-cool rounded-md px-2 py-1 font-medium transition"
+          >
+            <span>🔍</span>
+            <span>Details</span>
+          </button>
+
           <button
             onClick={() => onDraftPitch && onDraftPitch(job)}
-            className="inline-flex items-center gap-1 text-xs bg-signal/15 hover:bg-signal/25 border border-signal/40 text-signal rounded-md px-2 py-1 font-medium transition"
+            className="flex-1 inline-flex items-center justify-center gap-1 text-xs bg-surface2 hover:bg-ink border border-border hover:border-signal/40 text-muted hover:text-signal rounded-md px-2 py-1 font-medium transition"
           >
             <span>✨</span>
             <span>Pitch</span>
           </button>
-
-          {job.url && (
-            <a
-              href={job.url}
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-1 text-xs bg-cool/10 hover:bg-cool/20 border border-cool/30 text-cool rounded-md px-2 py-1 font-medium transition"
-            >
-              Apply ↗
-            </a>
-          )}
         </div>
+
+        {/* Row 2: Apply — full-width primary CTA */}
+        {job.url && (
+          <a
+            href={job.url}
+            target="_blank"
+            rel="noreferrer"
+            className="w-full inline-flex items-center justify-center gap-1.5 text-xs bg-cool/15 hover:bg-cool/25 border border-cool/40 text-cool rounded-md px-2 py-1.5 font-semibold transition"
+          >
+            Apply Now ↗
+          </a>
+        )}
       </div>
     </div>
   );
