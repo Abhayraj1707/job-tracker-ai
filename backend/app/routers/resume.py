@@ -264,18 +264,23 @@ async def run_pipeline_task():
         profile_data = get_current_profile()
         profile_str = json.dumps(profile_data)
 
-        # Gather jobs from Lever (Meesho, CRED, Paytm, etc.) + Greenhouse + RemoteOK + Himalayas
-        gh_jobs, lever_jobs, remoteok_jobs, himalayas_jobs = await asyncio.gather(
+        keywords = os.getenv("SEARCH_KEYWORDS", "software engineer, python, backend, data engineer, ai")
+        location = os.getenv("SEARCH_LOCATION", "")
+
+        # Gather jobs from all sources including Adzuna and JSearch (LinkedIn/Indeed/Glassdoor)
+        gh_jobs, lever_jobs, remoteok_jobs, himalayas_jobs, adzuna_jobs, jsearch_jobs = await asyncio.gather(
             search_greenhouse(hours_old=72),
             search_lever(hours_old=168),
             search_remoteok(hours_old=168),
             search_himalayas(hours_old=168),
+            search_adzuna(keywords, location, max_days_old=3),
+            search_jsearch(keywords, location, hours_old=72),
             return_exceptions=True
         )
         combined = []
-        for r in [gh_jobs, lever_jobs, remoteok_jobs, himalayas_jobs]:
+        for r in [gh_jobs, lever_jobs, remoteok_jobs, himalayas_jobs, adzuna_jobs, jsearch_jobs]:
             if isinstance(r, list):
-                combined.extend(r)
+                combined.extend([j for j in r if "error" not in j])
 
         filtered = [j for j in combined if is_title_relevant(j.get("title", ""))]
 
