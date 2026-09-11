@@ -106,7 +106,14 @@ async def main():
 
     ingested_jobs = []
 
-    async with httpx.AsyncClient(timeout=30) as client:
+    async with httpx.AsyncClient(timeout=60) as client:
+        # Wake up the backend first (free tier spins down after inactivity)
+        try:
+            await client.get(f"{BACKEND_URL}/jobs/", timeout=60)
+            print("[info] backend is awake")
+        except Exception as e:
+            print(f"[warn] backend wake-up ping failed: {e}")
+
         kept = 0
         for idx, job in enumerate(jobs, 1):
             fit = await score_fit(f"Title: {job.get('title')}\nCompany: {job.get('company')}\nLocation: {job.get('location')}\n{job.get('description', '')}", cv_profile_text)
@@ -128,10 +135,13 @@ async def main():
                     "fit_score": score,
                     "fit_reason": fit.get("reason"),
                 }
-                resp = await client.post(f"{BACKEND_URL}/jobs/", json=payload)
-                if resp.status_code == 200:
-                    kept += 1
-                    ingested_jobs.append({**payload, "fit_score": score, "fit_reason": fit.get("reason")})
+                try:
+                    resp = await client.post(f"{BACKEND_URL}/jobs/", json=payload)
+                    if resp.status_code == 200:
+                        kept += 1
+                        ingested_jobs.append({**payload, "fit_score": score, "fit_reason": fit.get("reason")})
+                except Exception as e:
+                    print(f"[warn] failed to ingest job '{job.get('title')}': {e}")
 
     print(f"[info] ingested {kept} jobs into tracker")
 
