@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useCallback } from "react";
 import KanbanColumn from "./KanbanColumn";
 import StatsBar from "./StatsBar";
 import ResumeUploadModal from "./ResumeUploadModal";
@@ -17,9 +17,14 @@ export default function JobBoard() {
   // Filters & Search state
   const [searchQuery, setSearchQuery] = useState("");
   const [minFit, setMinFit] = useState(0);
-  const [freshnessFilter, setFreshnessFilter] = useState("all"); // "all", "24h", "3d", "7d"
-  const [workplaceFilter, setWorkplaceFilter] = useState("all"); // "all", "remote", "india"
-  
+  const [minSalary, setMinSalary] = useState(0);
+  const [freshnessFilter, setFreshnessFilter] = useState("all");
+  const [workplaceFilter, setWorkplaceFilter] = useState("all");
+
+  // Bulk select state
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+
   // Actions state
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isAddJobOpen, setIsAddJobOpen] = useState(false);
@@ -81,7 +86,25 @@ export default function JobBoard() {
 
   async function handleDelete(id) {
     setJobs((prev) => prev.filter((j) => j.id !== id));
+    setSelectedIds((prev) => { const n = new Set(prev); n.delete(id); return n; });
     await deleteJob(id);
+  }
+
+  function toggleSelect(id) {
+    setSelectedIds((prev) => {
+      const n = new Set(prev);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+
+  async function handleBulkDelete() {
+    if (!selectedIds.size) return;
+    const ids = [...selectedIds];
+    setJobs((prev) => prev.filter((j) => !ids.includes(j.id)));
+    setSelectedIds(new Set());
+    setSelectMode(false);
+    await Promise.all(ids.map((id) => deleteJob(id)));
   }
 
   // Multi-criteria filter logic
@@ -90,6 +113,14 @@ export default function JobBoard() {
       // 1. Min Fit Score Filter
       if (minFit > 0 && j.fit_score !== null && j.fit_score < minFit) {
         return false;
+      }
+
+      // 2. Min Salary Filter
+      if (minSalary > 0) {
+        const hasSalary = j.salary_min != null || j.salary_max != null;
+        if (!hasSalary) return false;
+        const jobMax = j.salary_max || j.salary_min || 0;
+        if (jobMax < minSalary) return false;
       }
 
       // 2. Freshness Filter
@@ -127,7 +158,7 @@ export default function JobBoard() {
 
       return true;
     });
-  }, [jobs, minFit, freshnessFilter, workplaceFilter, searchQuery]);
+  }, [jobs, minFit, minSalary, freshnessFilter, workplaceFilter, searchQuery]);
 
   const byStatus = (status) => filtered.filter((j) => j.status === status);
 
@@ -183,6 +214,34 @@ export default function JobBoard() {
               <span className={fetchingJobs ? "animate-spin" : ""}>✨</span>
               <span>{fetchingJobs ? "Matching Jobs..." : "Fetch New Jobs"}</span>
             </button>
+
+            {/* Bulk Select / Delete */}
+            {!selectMode ? (
+              <button
+                onClick={() => setSelectMode(true)}
+                className="text-xs bg-surface2 hover:bg-surface border border-border hover:border-warn/50 text-muted hover:text-warn rounded-lg px-3 py-1.5 transition flex items-center gap-1.5 shadow-sm"
+              >
+                <span>☑</span>
+                <span>Select</span>
+              </button>
+            ) : (
+              <div className="flex items-center gap-1.5">
+                <span className="text-xs text-muted font-mono">{selectedIds.size} selected</span>
+                <button
+                  onClick={handleBulkDelete}
+                  disabled={selectedIds.size === 0}
+                  className="text-xs bg-warn/15 hover:bg-warn/25 border border-warn/40 text-warn rounded-lg px-3 py-1.5 transition disabled:opacity-40"
+                >
+                  🗑 Delete
+                </button>
+                <button
+                  onClick={() => { setSelectMode(false); setSelectedIds(new Set()); }}
+                  className="text-xs border border-border text-muted hover:text-text rounded-lg px-2 py-1.5 transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
 
             <button
               onClick={load}
@@ -279,6 +338,23 @@ export default function JobBoard() {
                 {minFit > 0 ? `${minFit}%` : "0%"}
               </span>
             </div>
+
+            {/* Min Salary Filter */}
+            <div className="flex items-center gap-2 bg-surface2 border border-border rounded-lg px-3 py-1">
+              <span className="text-muted text-xs">💰 Min salary:</span>
+              <select
+                value={minSalary}
+                onChange={(e) => setMinSalary(Number(e.target.value))}
+                className="bg-transparent text-xs text-text focus:outline-none cursor-pointer font-mono"
+              >
+                <option value={0}>Any</option>
+                <option value={30000}>$30k+</option>
+                <option value={50000}>$50k+</option>
+                <option value={80000}>$80k+</option>
+                <option value={100000}>$100k+</option>
+                <option value={150000}>$150k+</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
@@ -338,6 +414,9 @@ export default function JobBoard() {
                   onStatusChange={handleStatusChange}
                   onDelete={handleDelete}
                   onDraftPitch={(job) => setSelectedPitchJob(job)}
+                  selectMode={selectMode}
+                  selectedIds={selectedIds}
+                  onToggleSelect={toggleSelect}
                 />
               ))}
             </div>

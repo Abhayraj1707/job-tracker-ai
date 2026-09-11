@@ -56,7 +56,7 @@ function formatSalary(min, max) {
   return `Up to ${fmt(max)}`;
 }
 
-export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch }) {
+export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch, selectMode, isSelected, onToggleSelect }) {
   const badge = fitBadge(job.fit_score);
   const freshness = getFreshness(job.posted_at);
   const remote = isRemote(job.location);
@@ -116,15 +116,29 @@ export default function JobCard({ job, onStatusChange, onDelete, onDraftPitch })
   const followUpBadge = getFollowUpBadge();
 
   return (
-    <div className="group bg-surface hover:bg-surface2/80 border border-border hover:border-cool/40 rounded-xl p-3.5 flex flex-col gap-2.5 transition-all duration-150 shadow-sm hover:shadow-md relative">
-      {/* Remove button */}
-      <button
-        onClick={() => onDelete(job.id)}
-        className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted/60 hover:text-warn hover:bg-warn/10 text-xs w-5 h-5 rounded flex items-center justify-center transition"
-        title="Remove from board"
-      >
-        ✕
-      </button>
+    <div
+      onClick={selectMode ? () => onToggleSelect(job.id) : undefined}
+      className={`group bg-surface hover:bg-surface2/80 border rounded-xl p-3.5 flex flex-col gap-2.5 transition-all duration-150 shadow-sm hover:shadow-md relative
+        ${selectMode ? "cursor-pointer" : ""}
+        ${isSelected ? "border-signal/60 bg-signal/5" : "border-border hover:border-cool/40"}
+      `}
+    >
+      {/* Checkbox in select mode, remove button otherwise */}
+      {selectMode ? (
+        <div className={`absolute top-2 right-2 w-5 h-5 rounded border-2 flex items-center justify-center text-[10px] font-bold transition
+          ${isSelected ? "bg-signal border-signal text-black" : "border-muted/50 bg-ink"}`}
+        >
+          {isSelected && "✓"}
+        </div>
+      ) : (
+        <button
+          onClick={() => onDelete(job.id)}
+          className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 text-muted/60 hover:text-warn hover:bg-warn/10 text-xs w-5 h-5 rounded flex items-center justify-center transition"
+          title="Remove from board"
+        >
+          ✕
+        </button>
+      )}
 
       {/* Header: Title, Company, Match Badge */}
       <div className="flex items-start justify-between gap-2 pr-4">

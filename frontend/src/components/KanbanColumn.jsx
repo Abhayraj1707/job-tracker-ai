@@ -1,6 +1,6 @@
 import JobCard from "./JobCard";
 
-export default function KanbanColumn({ title, jobs, onStatusChange, onDelete, onDraftPitch }) {
+export default function KanbanColumn({ title, jobs, onStatusChange, onDelete, onDraftPitch, selectMode, selectedIds, onToggleSelect }) {
   return (
     <div className="flex flex-col min-w-[280px] w-[280px] shrink-0">
       <div className="flex items-baseline justify-between px-1 pb-2">
@@ -20,6 +20,9 @@ export default function KanbanColumn({ title, jobs, onStatusChange, onDelete, on
               onStatusChange={onStatusChange}
               onDelete={onDelete}
               onDraftPitch={onDraftPitch}
+              selectMode={selectMode}
+              isSelected={selectedIds?.has(job.id)}
+              onToggleSelect={onToggleSelect}
             />
           ))
         )}

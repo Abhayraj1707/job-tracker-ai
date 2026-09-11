@@ -28,21 +28,58 @@ def list_jobs(
 def ingest_job(job: schemas.JobCreate, db: Session = Depends(get_db)):
     """
     Called by the scheduler pipeline after search_jobs + score_job_fit.
-    Skips insert if (title, company) already exists — keeps the feed deduplicated.
+    Deduplication strategy (in order):
+      1. Same URL (different title wordings, same actual posting)
+      2. Same normalised title + company (catches title case/punctuation variance)
     """
-    existing = (
+    # 1. URL-based dedup (most reliable — same link = same job)
+    if job.url:
+        existing = db.query(models.Job).filter(models.Job.url == job.url).first()
+        if existing:
+            return existing
+
+    # 2. Normalised title + company dedup
+    def normalise(s: str) -> str:
+        import re
+        return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+    norm_title = normalise(job.title)
+    norm_company = normalise(job.company)
+
+    for candidate in (
         db.query(models.Job)
-        .filter(models.Job.title == job.title, models.Job.company == job.company)
-        .first()
-    )
-    if existing:
-        return existing
+        .filter(models.Job.company == job.company)
+        .all()
+    ):
+        if normalise(candidate.title) == norm_title and normalise(candidate.company) == norm_company:
+            return candidate
 
     db_job = models.Job(**job.model_dump(), status="New")
     db.add(db_job)
     db.commit()
     db.refresh(db_job)
     return db_job
+
+
+@router.get("/dedupe", response_model=dict)
+def find_duplicates(db: Session = Depends(get_db)):
+    """Returns groups of likely duplicate jobs still in the DB."""
+    import re
+    def normalise(s: str) -> str:
+        return re.sub(r"[^a-z0-9]", "", (s or "").lower())
+
+    all_jobs = db.query(models.Job).all()
+    seen: dict = {}
+    duplicates = []
+
+    for job in all_jobs:
+        key = f"{normalise(job.title)}::{normalise(job.company)}"
+        if key in seen:
+            duplicates.append({"kept": seen[key], "duplicate_id": job.id, "title": job.title, "company": job.company})
+        else:
+            seen[key] = job.id
+
+    return {"duplicate_count": len(duplicates), "duplicates": duplicates}
 
 
 @router.patch("/{job_id}/status", response_model=schemas.JobOut)
